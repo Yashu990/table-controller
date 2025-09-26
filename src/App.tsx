@@ -11,6 +11,7 @@ import {
 // import RNBluetoothClassic from 'react-native-bluetooth-classic';
 import FirstScreen from './components/FirstScreen';
 import logo from '../assets/images/logo.png'
+import { useState } from 'react';
 export default function App() {
   // async function requestBluetoothPermissions() {
   //   if (Platform.OS === 'android') {
@@ -87,18 +88,26 @@ export default function App() {
   // useEffect(() => {
   //   requestBluetoothPermissions();
   // }, []);
+  const [isConnected, setIsConnected]=useState(false);
 
   
   return (
     <View style={styles.mainBox}>
       <StatusBar />
-      <View>
+      <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
         <Image
         source={logo}
         style={styles.logo}
         />
+        <View style={{marginRight:60}}>
+        {
+          isConnected ?
+          <Text style={{color:"green", fontWeight:600, fontSize:16}}>🟢 Connected</Text> :
+          <Text style={{color:"red", fontWeight:500}}>🔴 Not Connected</Text>
+        }
+        </View>
       </View>
-      <FirstScreen  />
+      <FirstScreen connected={setIsConnected} />
     </View>
   );
 }

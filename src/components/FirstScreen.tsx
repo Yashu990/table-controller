@@ -26,12 +26,13 @@ import slider2 from '../../assets/images/slider2.png';
 import Snackbar from 'react-native-snackbar';
 
 
-export default function FirstScreen() {
+export default function FirstScreen({ connected }: any) {
 
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    let hc05Device:any;
-    const [isTablet, setIsTablet]= useState(Dimensions.get('window').width > 800);
-    
+    const intervalRef = useRef<number | null>(null);
+    const intervalReconnectRef = useRef<number | null>(null);
+    let hc05Device: any;
+    const [isTablet, setIsTablet] = useState(Dimensions.get('window').width > 800);
+
     async function requestBluetoothPermissions() {
         if (Platform.OS === 'android') {
             try {
@@ -85,10 +86,10 @@ export default function FirstScreen() {
             } else {
                 console.log("HC-05 not found");
                 Snackbar.show({
-                    text:"HC-05 not found",
-                    duration:Snackbar.LENGTH_SHORT,
-                    backgroundColor:'#ff0000',
-                    textColor:'white'
+                    text: "HC-05 not found",
+                    duration: Snackbar.LENGTH_SHORT,
+                    backgroundColor: '#ff0000',
+                    textColor: 'white'
                 })
             }
         } catch (error) {
@@ -101,10 +102,37 @@ export default function FirstScreen() {
         try {
             hc05Device = await RNBluetoothClassic.connectToDevice(address);
             console.log("Connected to HC-05:", hc05Device.name);
+            Snackbar.show({
+                text: "Connected to HC-05",
+                duration: Snackbar.LENGTH_SHORT,
+                backgroundColor: '#46d134ff',
+                textColor: 'white'
+            })
+            connected(true)
+            if (intervalReconnectRef.current !== null) {
+                console.log("cleared interval");
+
+                clearInterval(intervalReconnectRef.current);
+                intervalReconnectRef.current=null;
+            }
 
         } catch (error) {
             console.error("Connection faild: ", error);
+            Snackbar.show({
+                text: "Not Connected to HC-05",
+                duration: Snackbar.LENGTH_SHORT,
+                backgroundColor: '#cf0a0aff',
+                textColor: 'white'
+            })
+            if (intervalReconnectRef.current !== null) {
+                clearInterval(intervalReconnectRef.current);
+                intervalReconnectRef.current=null;
+            }
+            intervalReconnectRef.current = setInterval(() => {
+                listDevices();
+                console.log("started interval");
 
+            }, 5000);
         }
     }
 
@@ -112,6 +140,7 @@ export default function FirstScreen() {
     async function sendTextCommand(dynamicByte: string) {
         if (!hc05Device) {
             console.log("Not connected to HC-05");
+            listDevices();
             return;
         }
 
@@ -125,16 +154,18 @@ export default function FirstScreen() {
 
             await hc05Device.write(command);
             console.log("Command sent with dynamic byte:", dynamicByte);
-            
+
         } catch (error) {
             console.error("error sending text comand", error);
         }
     }
 
 
-    const pressIn = (code:string) => {
+    const pressIn = (code: string) => {
         intervalRef.current = setInterval(() => {
             console.log('Repeated action while pressing...');
+            console.log(hc05Device);
+
             sendTextCommand(code);
         }, 200);
     };
@@ -144,40 +175,47 @@ export default function FirstScreen() {
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
-            
+
             sendTextCommand("0x00");
         }
     };
+
+    const clickCommand =(code: string) =>{
+        sendTextCommand(code);
+        setTimeout(() => {
+            sendTextCommand('0x00')
+        }, 200);
+    }
 
     useEffect(() => {
         requestBluetoothPermissions();
     }, []);
 
-    useEffect(()=>{
-        const subscription = Dimensions.addEventListener('change',({window})=>{
-            if(window.width > 800) {
+    useEffect(() => {
+        const subscription = Dimensions.addEventListener('change', ({ window }) => {
+            if (window.width > 800) {
                 setIsTablet(true);
-            }else if(window.width <= 800 ){
+            } else if (window.width <= 800) {
                 setIsTablet(false);
             }
         })
         return () => subscription?.remove();
-    },[]);
+    }, []);
 
 
     return (
         // <ScrollView>
-            <View style={[styles.mainContainer,{flexDirection: isTablet ? 'row' : 'column'}]}>
+        <View style={[styles.mainContainer, { flexDirection: isTablet ? 'row' : 'column' }]}>
             <View>
                 <View style={styles.container}>
                     <View style={styles.mainBox}>
-                        <TouchableOpacity onPressIn={()=>pressIn('0x01')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x01')} onPressOut={pressOut} onPress={()=>clickCommand('0x01')}>
                             <Image source={H12} style={styles.icon} />
                         </TouchableOpacity>
 
                         <Image source={First} style={styles.bigIcon} />
 
-                        <TouchableOpacity onPressIn={()=>pressIn('0x02')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x02')} onPressOut={pressOut} onPress={()=>clickCommand('0x02')}>
                             <Image source={H2} style={styles.icon} />
                         </TouchableOpacity>
                     </View>
@@ -185,13 +223,13 @@ export default function FirstScreen() {
 
                 <View style={styles.container}>
                     <View style={styles.mainBox}>
-                        <TouchableOpacity onPressIn={()=>pressIn('0x03')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x03')} onPressOut={pressOut} onPress={()=>clickCommand('0x03')}>
                             <Image source={Trangel} style={styles.icon} />
                         </TouchableOpacity>
 
                         <Image source={Second} style={styles.bigIcon} />
 
-                        <TouchableOpacity onPressIn={()=>pressIn('0x04')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x04')} onPressOut={pressOut} onPress={()=>clickCommand('0x04')}>
                             <Image source={Treverse} style={styles.icon} />
                         </TouchableOpacity>
                     </View>
@@ -199,13 +237,13 @@ export default function FirstScreen() {
 
                 <View style={styles.container}>
                     <View style={styles.mainBox}>
-                        <TouchableOpacity onPressIn={()=>pressIn('0x05')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x05')} onPressOut={pressOut} onPress={()=>clickCommand('0x05')}>
                             <Image source={Backup} style={styles.icon} />
                         </TouchableOpacity>
 
                         <Image source={Three} style={styles.bigIcon} />
 
-                        <TouchableOpacity onPressIn={()=>pressIn('0x06')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x06')} onPressOut={pressOut} onPress={()=>clickCommand('0x06')}>
                             <Image source={Backdn} style={styles.icon} />
                         </TouchableOpacity>
                     </View>
@@ -214,32 +252,32 @@ export default function FirstScreen() {
             <View>
                 <View style={styles.container}>
                     <View style={styles.mainBox}>
-                        <TouchableOpacity onPressIn={()=>pressIn('0x07')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x07')} onPressOut={pressOut} onPress={()=>clickCommand('0x07')}>
                             <Image source={slide} style={styles.icon} />
                         </TouchableOpacity>
 
                         <Image source={four} style={styles.bigIcon} />
 
-                        <TouchableOpacity onPressIn={()=>pressIn('0x08')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x08')} onPressOut={pressOut} onPress={()=>clickCommand('0x08')}>
                             <Image source={slide2} style={styles.icon} />
                         </TouchableOpacity>
                     </View>
                 </View>
                 <View style={styles.container}>
                     <View style={styles.mainBox}>
-                        <TouchableOpacity onPressIn={()=>pressIn('0x09')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x09')} onPressOut={pressOut} onPress={()=>clickCommand('0x09')}>
                             <Image source={sliderr1} style={styles.icon} />
                         </TouchableOpacity>
 
                         <Image source={First} style={styles.bigIcon} />
 
-                        <TouchableOpacity onPressIn={()=>pressIn('0x10')} onPressOut={pressOut}>
+                        <TouchableOpacity onPressIn={() => pressIn('0x10')} onPressOut={pressOut} onPress={()=>clickCommand('0x10')}>
                             <Image source={slider2} style={styles.icon} />
                         </TouchableOpacity>
                     </View>
                 </View>
             </View>
-            </View>
+        </View>
         // </ScrollView>
     );
 }
@@ -252,7 +290,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     container: {
-        height: hp('12%'),
+        height: hp('18%'),
         justifyContent: "space-between",
         alignItems: "center",
         margin: 15,
@@ -267,7 +305,7 @@ const styles = StyleSheet.create({
         resizeMode: "contain",
     },
     mainContainer: {
-        height:hp('75%'),
-        justifyContent:"space-evenly",
+        height: hp('75%'),
+        justifyContent: "space-evenly",
     }
 });
